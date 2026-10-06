@@ -19,35 +19,24 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON A
 #define COMMON_H
 
 #define DECLARE_CLASS( className, baseClassName ) \
-	typedef baseClassName BaseClass; \
-	typedef className ThisClass; \
+    typedef baseClassName BaseClass; \
+    typedef className ThisClass; \
 
-#ifdef __GNUC__
-
-#include <csignal>
 
 #define TDebugBreak() \
-	::raise(SIGTRAP); \
+    __debugbreak(); \
 
-#else
-
-#define TDebugBreak() \
-	__debugbreak(); \
-
-#endif
-
-// tinker_platform.h
 extern void DebugPrint(const char* pszText);
 
 #ifdef _DEBUG
 
 #define TAssert(x) \
 { \
-	if (!(x)) \
-	{ \
-		DebugPrint("Assert failed: " #x "\n"); \
-		TDebugBreak(); \
-	} \
+    if (!(x)) \
+    { \
+       DebugPrint("Assert failed: " #x "\n"); \
+       TDebugBreak(); \
+    } \
 } \
 
 #else
@@ -55,8 +44,10 @@ extern void DebugPrint(const char* pszText);
 #if defined(_T_RELEASE_ASSERTS)
 #define TAssert(x) \
 { \
-	if (!(x)) \
-		DebugPrint("Assert failed: " #x "\n"); \
+    if (!(x)) \
+    { \
+       DebugPrint("Assert failed: " #x "\n"); \
+    } \
 } \
 
 #else
@@ -70,31 +61,5 @@ extern void DebugPrint(const char* pszText);
 // If you hit this, the code is either incomplete or untested.
 #define TUnimplemented() TAssert(false)
 
-#ifdef __GNUC__
-// Clang or GCC
-#ifdef __clang__
-#else
-#if __GNUC__ < 4 || __GNUC_MINOR__ < 6
-
-const                        // this is a const object...
-class {
-public:
-  template<class T>          // convertible to any type
-    operator T*() const      // of null non-member
-    { return 0; }            // pointer...
-  template<class C, class T> // or any type of null
-    operator T C::*() const  // member pointer...
-    { return 0; }
-private:
-  void operator&() const;    // whose address can't be taken
-} nullptr = {};              // and whose name is nullptr
-
-#endif
-#endif
-
-// For std::shared_ptr
-#include <memory>
-
-#endif
 
 #endif

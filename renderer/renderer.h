@@ -23,6 +23,10 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON A
 
 #include <vector.h>
 #include <vector2d.h>
+#include <cstdint>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 
 #include "render_common.h"
 

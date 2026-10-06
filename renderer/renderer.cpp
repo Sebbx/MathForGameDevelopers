@@ -16,24 +16,14 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON A
 */
 
 #include "renderer.h"
-
 #include <vector>
 #include <assert.h>
-
-#include <GL3/gl3w.h>
-#include <GL/glfw.h>
-
-#if defined(__APPLE__)
-#include <OpenGL/glu.h>
-#else
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <GL/glu.h>
-#endif
-
 #include <files.h>
-
 #include <renderer/image_read.h>
 #include <renderer/shaders.h>
-
 #include "application.h"
 #include "renderingcontext.h"
 
@@ -43,9 +33,6 @@ CRenderer* CRenderer::s_pRenderer = nullptr;
 
 CRenderer::CRenderer(size_t iWidth, size_t iHeight)
 {
-	if (!HardwareSupported())
-		exit(1);
-
 	m_bRenderOrthographic = false;
 
 	m_bUseMultisampleTextures = !!glTexImage2DMultisample;
@@ -213,7 +200,7 @@ void CRenderer::SetSize(int w, int h)
 
 bool CRenderer::HardwareSupported()
 {
-	if (!gl3wIsSupported(3, 2))
+	if (!GLAD_GL_VERSION_3_2)
 		return false;
 
 	// Compile a test shader. If it fails we don't support shaders.

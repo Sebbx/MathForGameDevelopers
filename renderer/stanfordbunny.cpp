@@ -44,7 +44,7 @@
  STRICT LIABILITY OR OTHERWISE, EVEN IF APPLE HAS BEEN ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE.
  
- Copyright © 2006 Apple Computer, Inc., All Rights Reserved
+ Copyright ï¿½ 2006 Apple Computer, Inc., All Rights Reserved
  
 */
 
@@ -72,7 +72,8 @@
 #include <vector>
 #include <assert.h>
 
-#include <GL3/gl3w.h>
+#include <glad/glad.h>
+#include <GL/glu.h>
 
 using namespace std;
 

@@ -339,14 +339,14 @@ inline bool fgetts(std::string& str, FILE* fp)
 
 inline char* tstrncpy(char* d, size_t d_size, const char* s, size_t n)
 {
-#ifdef _WIN32
-	return std::char_traits<char>::_Copy_s(d, d_size, s, n);
-#else
-	if (d_size < n)
-		n = d_size;
+	if (d_size == 0)
+	{
+		return d;
+	}
 
-	return std::char_traits<char>::copy(d, s, n);
-#endif
+	size_t copy_len = (n < d_size) ? n : d_size;
+	memcpy(d, s, copy_len);
+	return d;
 }
 
 inline size_t tstrlen(const char* s)

@@ -4,7 +4,7 @@ project(MathForGameDevelopers CXX C)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_definitions(-DWIN32 -D_WINDOWS)
+add_definitions(-DWIN32 -D_WINDOWS -DUNICODE -D_UNICODE)
 
 include(FetchContent)
 FetchContent_Declare(
