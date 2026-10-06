@@ -21,14 +21,8 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON A
 
 #include <algorithm>
 
-#include <GL3/gl3w.h>
-
-#if defined(__APPLE__)
-#include <OpenGL/glu.h>
-#include <unistd.h>
-#else
-#include <GL/glu.h>
-#endif
+#include <glad/glad.h>
+#include <windows.h>
 
 #include <mtrand.h>
 #include <math/collision.h>
@@ -296,7 +290,7 @@ bool CGame::MouseInput(int iButton, tinker_mouse_state_t iState)
 	}
 
 	if (iButton == TINKER_KEY_MOUSE_RIGHT && iState == TINKER_MOUSE_PRESSED)
-		sleep(1);
+		Sleep(1000);
 
 	return false;
 }

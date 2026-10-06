@@ -18,8 +18,8 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON A
 #include "application.h"
 
 #include <time.h>
-#include <GL3/gl3w.h>
-#include <GL/glfw.h>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <iostream>
 #include <fstream>
 #include <string.h>
@@ -53,96 +53,90 @@ CApplication::CApplication(int argc, char** argv)
 
 bool CApplication::OpenWindow(size_t iWidth, size_t iHeight, bool bFullscreen, bool bResizeable)
 {
-#ifdef __APPLE__
-	// On macOS, glfwInit() can change the current directory.
-	// See http://www.glfw.org/docs/latest/group__init.html
-	char *cwd = getcwd(0, 0);
-	int ret = glfwInit();
-	chdir(cwd);
-	free(cwd);
-#else
-	int ret = glfwInit();
-#endif
-	if (!ret) {
-		printf("glfwInit failed\n");
-		exit(1);
-	}
+    int ret = glfwInit();
+    if (!ret) {
+       printf("glfwInit failed\n");
+       exit(1);
+    }
 
-	m_bFullscreen = bFullscreen;
+    m_bFullscreen = bFullscreen;
 
-	if (HasCommandLineSwitch("--fullscreen"))
-		m_bFullscreen = true;
+    if (HasCommandLineSwitch("--fullscreen"))
+       m_bFullscreen = true;
 
-	if (HasCommandLineSwitch("--windowed"))
-		m_bFullscreen = false;
+    if (HasCommandLineSwitch("--windowed"))
+       m_bFullscreen = false;
 
-	m_iWindowWidth = iWidth;
-	m_iWindowHeight = iHeight;
+    m_iWindowWidth = iWidth;
+    m_iWindowHeight = iHeight;
 
-    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
-    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 2);
-    glfwOpenWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-	if (m_bMultisampling)
-		glfwOpenWindowHint(GLFW_FSAA_SAMPLES, 4);
+    if (m_bMultisampling)
+       glfwWindowHint(GLFW_SAMPLES, 4);
 
-	glfwOpenWindowHint(GLFW_DEPTH_BITS, 16);
-	glfwOpenWindowHint(GLFW_RED_BITS, 8);
-	glfwOpenWindowHint(GLFW_GREEN_BITS, 8);
-	glfwOpenWindowHint(GLFW_BLUE_BITS, 8);
-	glfwOpenWindowHint(GLFW_ALPHA_BITS, 8);
+    glfwWindowHint(GLFW_DEPTH_BITS, 16);
+    glfwWindowHint(GLFW_RED_BITS, 8);
+    glfwWindowHint(GLFW_GREEN_BITS, 8);
+    glfwWindowHint(GLFW_BLUE_BITS, 8);
+    glfwWindowHint(GLFW_ALPHA_BITS, 8);
 
-	if (!(m_pWindow = (size_t)glfwOpenWindow(iWidth, iHeight, 8, 8, 8, 8, 16, 0, GLFW_WINDOW)))
-	{
-		glfwTerminate();
-		return false;
-	}
+    GLFWwindow* pWindow = glfwCreateWindow(iWidth, iHeight, "Math for Game Developers", m_bFullscreen ? glfwGetPrimaryMonitor() : NULL, NULL);
+    if (!pWindow)
+    {
+       glfwTerminate();
+       return false;
+    }
+    m_pWindow = (size_t)pWindow;
+    glfwMakeContextCurrent(pWindow);
 
-	glfwSetWindowTitle((char*)L"Math for Game Developers");
+    int iScreenWidth;
+    int iScreenHeight;
 
-	int iScreenWidth;
-	int iScreenHeight;
+    GetScreenSize(iScreenWidth, iScreenHeight);
 
-	GetScreenSize(iScreenWidth, iScreenHeight);
+    if (!m_bFullscreen)
+    {
+       // The taskbar is at the bottom of the screen. Pretend the screen is smaller so the window doesn't clip down into it.
+       // Also the window's title bar at the top takes up space.
+       iScreenHeight -= 70;
 
-	if (!m_bFullscreen)
-	{
-		// The taskbar is at the bottom of the screen. Pretend the screen is smaller so the window doesn't clip down into it.
-		// Also the window's title bar at the top takes up space.
-		iScreenHeight -= 70;
+       int iWindowX = (int)(iScreenWidth/2-m_iWindowWidth/2);
+       int iWindowY = (int)(iScreenHeight/2-m_iWindowHeight/2);
+       iWindowY -= 40;    // Move it a tad so that we can see it better in the videos.
+       iWindowX -= 80;
 
-		int iWindowX = (int)(iScreenWidth/2-m_iWindowWidth/2);
-		int iWindowY = (int)(iScreenHeight/2-m_iWindowHeight/2);
-		iWindowY -= 40;    // Move it a tad so that we can see it better in the videos.
-		iWindowX -= 80;
-		glfwSetWindowPos(iWindowX, iWindowY);
-	}
+       glfwSetWindowPos(pWindow, iWindowX, iWindowY);
+    }
 
-	glfwSetWindowCloseCallback(&CApplication::WindowCloseCallback);
-	glfwSetWindowSizeCallback(&CApplication::WindowResizeCallback);
-	glfwSetKeyCallback(&CApplication::KeyEventCallback);
-	glfwSetCharCallback(&CApplication::CharEventCallback);
-	glfwSetMousePosCallback(&CApplication::MouseMotionCallback);
-	glfwSetMouseButtonCallback(&CApplication::MouseInputCallback);
-	glfwSwapInterval( 1 );
-	glfwSetTime( 0.0 );
+    glfwSetWindowCloseCallback(pWindow, [](GLFWwindow*){ if(Get()) Get()->WindowClose(); });
+    glfwSetWindowSizeCallback(pWindow, [](GLFWwindow*, int w, int h){ if(Get()) Get()->WindowResize(w, h); });
+    glfwSetKeyCallback(pWindow, [](GLFWwindow*, int k, int s, int a, int m){ if(Get()) Get()->KeyEvent(k, a); });
+    glfwSetCharCallback(pWindow, [](GLFWwindow*, unsigned int c){ if(Get()) Get()->CharEvent(c, 0); });
+    glfwSetCursorPosCallback(pWindow, [](GLFWwindow*, double x, double y){ if(Get()) Get()->MouseMotion((int)x, (int)y); });
+    glfwSetMouseButtonCallback(pWindow, [](GLFWwindow*, int b, int a, int m){ if(Get()) Get()->MouseInputCallback(b, a); });
 
-	SetMouseCursorEnabled(true);
+    glfwSwapInterval( 1 );
+    glfwSetTime( 0.0 );
 
-	GLenum err = gl3wInit();
-	if (0 != err)
-		exit(0);
+    SetMouseCursorEnabled(true);
 
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glLineWidth(1.0);
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+       exit(0);
 
-	m_bIsOpen = true;
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+    glLineWidth(1.0);
 
-	m_pRenderer = CreateRenderer();
-	m_pRenderer->Initialize();
+    m_bIsOpen = true;
 
-	return true;
+    m_pRenderer = CreateRenderer();
+    m_pRenderer->Initialize();
+
+    return true;
 }
 
 CApplication::~CApplication()
@@ -152,7 +146,8 @@ CApplication::~CApplication()
 
 void CApplication::SwapBuffers()
 {
-	glfwSwapBuffers();
+	if (m_pWindow)
+		glfwSwapBuffers((GLFWwindow*)m_pWindow);
 	glfwPollEvents();
 }
 
@@ -173,7 +168,9 @@ void CApplication::Close()
 
 bool CApplication::HasFocus()
 {
-	return glfwGetWindowParam(GLFW_ACTIVE) == GL_TRUE;
+	if (!m_pWindow)
+		return false;
+	return glfwGetWindowAttrib((GLFWwindow*)m_pWindow, GLFW_FOCUSED) == GL_TRUE;
 }
 
 void CApplication::Render()
@@ -211,158 +208,158 @@ tinker_keys_t MapKey(int c)
 {
 	switch (c)
 	{
-	case GLFW_KEY_ESC:
-		return TINKER_KEY_ESCAPE;
+		case GLFW_KEY_ESCAPE:
+			return TINKER_KEY_ESCAPE;
 
-	case GLFW_KEY_F1:
-		return TINKER_KEY_F1;
+		case GLFW_KEY_F1:
+			return TINKER_KEY_F1;
 
-	case GLFW_KEY_F2:
-		return TINKER_KEY_F2;
+		case GLFW_KEY_F2:
+			return TINKER_KEY_F2;
 
-	case GLFW_KEY_F3:
-		return TINKER_KEY_F3;
+		case GLFW_KEY_F3:
+			return TINKER_KEY_F3;
 
-	case GLFW_KEY_F4:
-		return TINKER_KEY_F4;
+		case GLFW_KEY_F4:
+			return TINKER_KEY_F4;
 
-	case GLFW_KEY_F5:
-		return TINKER_KEY_F5;
+		case GLFW_KEY_F5:
+			return TINKER_KEY_F5;
 
-	case GLFW_KEY_F6:
-		return TINKER_KEY_F6;
+		case GLFW_KEY_F6:
+			return TINKER_KEY_F6;
 
-	case GLFW_KEY_F7:
-		return TINKER_KEY_F7;
+		case GLFW_KEY_F7:
+			return TINKER_KEY_F7;
 
-	case GLFW_KEY_F8:
-		return TINKER_KEY_F8;
+		case GLFW_KEY_F8:
+			return TINKER_KEY_F8;
 
-	case GLFW_KEY_F9:
-		return TINKER_KEY_F9;
+		case GLFW_KEY_F9:
+			return TINKER_KEY_F9;
 
-	case GLFW_KEY_F10:
-		return TINKER_KEY_F10;
+		case GLFW_KEY_F10:
+			return TINKER_KEY_F10;
 
-	case GLFW_KEY_F11:
-		return TINKER_KEY_F11;
+		case GLFW_KEY_F11:
+			return TINKER_KEY_F11;
 
-	case GLFW_KEY_F12:
-		return TINKER_KEY_F12;
+		case GLFW_KEY_F12:
+			return TINKER_KEY_F12;
 
-	case GLFW_KEY_UP:
-		return TINKER_KEY_UP;
+		case GLFW_KEY_UP:
+			return TINKER_KEY_UP;
 
-	case GLFW_KEY_DOWN:
-		return TINKER_KEY_DOWN;
+		case GLFW_KEY_DOWN:
+			return TINKER_KEY_DOWN;
 
-	case GLFW_KEY_LEFT:
-		return TINKER_KEY_LEFT;
+		case GLFW_KEY_LEFT:
+			return TINKER_KEY_LEFT;
 
-	case GLFW_KEY_RIGHT:
-		return TINKER_KEY_RIGHT;
+		case GLFW_KEY_RIGHT:
+			return TINKER_KEY_RIGHT;
 
-	case GLFW_KEY_LSHIFT:
-		return TINKER_KEY_LSHIFT;
+		case GLFW_KEY_LEFT_SHIFT:
+			return TINKER_KEY_LSHIFT;
 
-	case GLFW_KEY_RSHIFT:
-		return TINKER_KEY_RSHIFT;
+		case GLFW_KEY_RIGHT_SHIFT:
+			return TINKER_KEY_RSHIFT;
 
-	case GLFW_KEY_LCTRL:
-		return TINKER_KEY_LCTRL;
+		case GLFW_KEY_LEFT_CONTROL:
+			return TINKER_KEY_LCTRL;
 
-	case GLFW_KEY_RCTRL:
-		return TINKER_KEY_RCTRL;
+		case GLFW_KEY_RIGHT_CONTROL:
+			return TINKER_KEY_RCTRL;
 
-	case GLFW_KEY_LALT:
-		return TINKER_KEY_LALT;
+		case GLFW_KEY_LEFT_ALT:
+			return TINKER_KEY_LALT;
 
-	case GLFW_KEY_RALT:
-		return TINKER_KEY_RALT;
+		case GLFW_KEY_RIGHT_ALT:
+			return TINKER_KEY_RALT;
 
-	case GLFW_KEY_TAB:
-		return TINKER_KEY_TAB;
+		case GLFW_KEY_TAB:
+			return TINKER_KEY_TAB;
 
-	case GLFW_KEY_ENTER:
-		return TINKER_KEY_ENTER;
+		case GLFW_KEY_ENTER:
+			return TINKER_KEY_ENTER;
 
-	case GLFW_KEY_BACKSPACE:
-		return TINKER_KEY_BACKSPACE;
+		case GLFW_KEY_BACKSPACE:
+			return TINKER_KEY_BACKSPACE;
 
-	case GLFW_KEY_INSERT:
-		return TINKER_KEY_INSERT;
+		case GLFW_KEY_INSERT:
+			return TINKER_KEY_INSERT;
 
-	case GLFW_KEY_DEL:
-		return TINKER_KEY_DEL;
+		case GLFW_KEY_DELETE:
+			return TINKER_KEY_DEL;
 
-	case GLFW_KEY_PAGEUP:
-		return TINKER_KEY_PAGEUP;
+		case GLFW_KEY_PAGE_UP:
+			return TINKER_KEY_PAGEUP;
 
-	case GLFW_KEY_PAGEDOWN:
-		return TINKER_KEY_PAGEDOWN;
+		case GLFW_KEY_PAGE_DOWN:
+			return TINKER_KEY_PAGEDOWN;
 
-	case GLFW_KEY_HOME:
-		return TINKER_KEY_HOME;
+		case GLFW_KEY_HOME:
+			return TINKER_KEY_HOME;
 
-	case GLFW_KEY_END:
-		return TINKER_KEY_END;
+		case GLFW_KEY_END:
+			return TINKER_KEY_END;
 
-	case GLFW_KEY_KP_0:
-		return TINKER_KEY_KP_0;
+		case GLFW_KEY_KP_0:
+			return TINKER_KEY_KP_0;
 
-	case GLFW_KEY_KP_1:
-		return TINKER_KEY_KP_1;
+		case GLFW_KEY_KP_1:
+			return TINKER_KEY_KP_1;
 
-	case GLFW_KEY_KP_2:
-		return TINKER_KEY_KP_2;
+		case GLFW_KEY_KP_2:
+			return TINKER_KEY_KP_2;
 
-	case GLFW_KEY_KP_3:
-		return TINKER_KEY_KP_3;
+		case GLFW_KEY_KP_3:
+			return TINKER_KEY_KP_3;
 
-	case GLFW_KEY_KP_4:
-		return TINKER_KEY_KP_4;
+		case GLFW_KEY_KP_4:
+			return TINKER_KEY_KP_4;
 
-	case GLFW_KEY_KP_5:
-		return TINKER_KEY_KP_5;
+		case GLFW_KEY_KP_5:
+			return TINKER_KEY_KP_5;
 
-	case GLFW_KEY_KP_6:
-		return TINKER_KEY_KP_6;
+		case GLFW_KEY_KP_6:
+			return TINKER_KEY_KP_6;
 
-	case GLFW_KEY_KP_7:
-		return TINKER_KEY_KP_7;
+		case GLFW_KEY_KP_7:
+			return TINKER_KEY_KP_7;
 
-	case GLFW_KEY_KP_8:
-		return TINKER_KEY_KP_8;
+		case GLFW_KEY_KP_8:
+			return TINKER_KEY_KP_8;
 
-	case GLFW_KEY_KP_9:
-		return TINKER_KEY_KP_9;
+		case GLFW_KEY_KP_9:
+			return TINKER_KEY_KP_9;
 
-	case GLFW_KEY_KP_DIVIDE:
-		return TINKER_KEY_KP_DIVIDE;
+		case GLFW_KEY_KP_DIVIDE:
+			return TINKER_KEY_KP_DIVIDE;
 
-	case GLFW_KEY_KP_MULTIPLY:
-		return TINKER_KEY_KP_MULTIPLY;
+		case GLFW_KEY_KP_MULTIPLY:
+			return TINKER_KEY_KP_MULTIPLY;
 
-	case GLFW_KEY_KP_SUBTRACT:
-		return TINKER_KEY_KP_SUBTRACT;
+		case GLFW_KEY_KP_SUBTRACT:
+			return TINKER_KEY_KP_SUBTRACT;
 
-	case GLFW_KEY_KP_ADD:
-		return TINKER_KEY_KP_ADD;
+		case GLFW_KEY_KP_ADD:
+			return TINKER_KEY_KP_ADD;
 
-	case GLFW_KEY_KP_DECIMAL:
-		return TINKER_KEY_KP_DECIMAL;
+		case GLFW_KEY_KP_DECIMAL:
+			return TINKER_KEY_KP_DECIMAL;
 
-	case GLFW_KEY_KP_EQUAL:
-		return TINKER_KEY_KP_EQUAL;
+		case GLFW_KEY_KP_EQUAL:
+			return TINKER_KEY_KP_EQUAL;
 
-	case GLFW_KEY_KP_ENTER:
-		return TINKER_KEY_KP_ENTER;
+		case GLFW_KEY_KP_ENTER:
+			return TINKER_KEY_KP_ENTER;
 	}
 
-	if (c < 256)
-		return (tinker_keys_t)TranslateKeyToQwerty(c);
+if (c < 256)
+	return (tinker_keys_t) TranslateKeyToQwerty(c);
 
-	return TINKER_KEY_UKNOWN;
+return TINKER_KEY_UKNOWN;
 }
 
 tinker_keys_t MapMouseKey(int c)
@@ -467,45 +464,56 @@ void CApplication::KeyRelease(int c)
 
 bool CApplication::IsCtrlDown()
 {
-	return glfwGetKey(GLFW_KEY_LCTRL) || glfwGetKey(GLFW_KEY_RCTRL);
+	if (!m_pWindow) return false;
+	return glfwGetKey((GLFWwindow *) m_pWindow, GLFW_KEY_LEFT_CONTROL) || glfwGetKey(
+		       (GLFWwindow *) m_pWindow, GLFW_KEY_RIGHT_CONTROL);
 }
 
 bool CApplication::IsAltDown()
 {
-	return glfwGetKey(GLFW_KEY_LALT) || glfwGetKey(GLFW_KEY_RALT);
+	if (!m_pWindow) return false;
+	return glfwGetKey((GLFWwindow *) m_pWindow, GLFW_KEY_LEFT_ALT) || glfwGetKey(
+		       (GLFWwindow *) m_pWindow, GLFW_KEY_RIGHT_ALT);
 }
 
 bool CApplication::IsShiftDown()
 {
-	return glfwGetKey(GLFW_KEY_LSHIFT) || glfwGetKey(GLFW_KEY_RSHIFT);
+	if (!m_pWindow) return false;
+	return glfwGetKey((GLFWwindow *) m_pWindow, GLFW_KEY_LEFT_SHIFT) || glfwGetKey(
+		       (GLFWwindow *) m_pWindow, GLFW_KEY_RIGHT_SHIFT);
 }
 
 bool CApplication::IsMouseLeftDown()
 {
-	return glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+	if (!m_pWindow) return false;
+	return glfwGetMouseButton((GLFWwindow *) m_pWindow, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 }
 
 bool CApplication::IsMouseRightDown()
 {
-	return glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+	if (!m_pWindow) return false;
+	return glfwGetMouseButton((GLFWwindow *) m_pWindow, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
 }
 
 bool CApplication::IsMouseMiddleDown()
 {
-	return glfwGetMouseButton(GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+	if (!m_pWindow) return false;
+	return glfwGetMouseButton((GLFWwindow *) m_pWindow, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
 }
 
-void CApplication::GetMousePosition(int& x, int& y)
+void CApplication::GetMousePosition(int &x, int &y)
 {
-	glfwGetMousePos(&x, &y);
+	double dx = 0, dy = 0;
+	if (m_pWindow)
+		glfwGetCursorPos((GLFWwindow *) m_pWindow, &dx, &dy);
+	x = (int) dx;
+	y = (int) dy;
 }
 
 void CApplication::SetMouseCursorEnabled(bool bEnabled)
 {
-	if (bEnabled)
-		glfwEnable(GLFW_MOUSE_CURSOR);
-	else
-		glfwDisable(GLFW_MOUSE_CURSOR);
+	if (m_pWindow)
+		glfwSetInputMode((GLFWwindow *) m_pWindow, GLFW_CURSOR, bEnabled ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 
 	m_bMouseEnabled = bEnabled;
 }
